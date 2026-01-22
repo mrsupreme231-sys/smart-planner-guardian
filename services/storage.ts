@@ -39,6 +39,9 @@ export const registerUser = async (email: string, passcode: string, name: string
       state: initialState
     });
 
+    // Save passcode locally for future automatic login
+    localStorage.setItem(`passcode_${email}`, passcode);
+
     return true;
   } catch (error) {
     console.error('Error registering user:', error);
@@ -226,6 +229,8 @@ export const loginUser = async (email: string, passcode: string): Promise<AppSta
     if (userSnapshot.exists()) {
       const userData = userSnapshot.data();
       if (userData.passcode === passcode) {
+        // Save passcode locally for future automatic login
+        localStorage.setItem(`passcode_${email}`, passcode);
         return userData.state as AppState;
       }
     }
@@ -258,6 +263,8 @@ export const loginWithPasscodeOnly = async (passcode: string): Promise<AppState 
       
       if (userData.passcode === MASTER_PASSCODE) {
         saveActiveSession(firstUser.id);
+        // Save passcode locally for future automatic login
+        localStorage.setItem(`passcode_${firstUser.id}`, passcode);
         return userData.state as AppState;
       }
     }
@@ -280,6 +287,8 @@ export const loginWithPasscodeOnly = async (passcode: string): Promise<AppState 
       const userDoc = usersSnapshot.docs[0];
       saveActiveSession(userDoc.id);
       const userData = userDoc.data();
+      // Save passcode locally for future automatic login
+      localStorage.setItem(`passcode_${userDoc.id}`, passcode);
       return userData.state as AppState;
     }
   }

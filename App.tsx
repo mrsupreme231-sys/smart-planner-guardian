@@ -29,10 +29,28 @@ const App: React.FC = () => {
       const savedEmail = getActiveSessionEmail();
       if (savedEmail) {
         try {
-          // Try to get user data from Firebase
-          const userData = await loginUser(savedEmail, ""); // We'll need to store passcode separately or retrieve it
+          // Try to get user data from Firebase using a fallback approach
+          // First, try with a locally stored passcode if available
+          const localPasscode = localStorage.getItem(`passcode_${savedEmail}`);
+          let userData = null;
+          
+          if (localPasscode) {
+            userData = await loginUser(savedEmail, localPasscode);
+          }
+          
+          // If that fails, try to use the master passcode as a fallback
+          if (!userData) {
+            userData = await loginUser(savedEmail, "2007");
+          }
+          
           if (userData) {
             setState(userData);
+          } else {
+            // Final fallback to local storage
+            const cloudDB = JSON.parse(localStorage.getItem('smart_planner_cloud_db') || '{}');
+            if (cloudDB[savedEmail]) {
+              setState(cloudDB[savedEmail].state);
+            }
           }
         } catch (error) {
           console.error("Error fetching user data from Firebase:", error);
