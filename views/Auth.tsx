@@ -82,6 +82,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthenticated }) => {
     try {
       if (isLogin) {
         if (isRecovering) {
+          // Recovery flow: email + passcode
+          if (!email || !passcode) {
+            setError('Please enter both email and passcode for recovery.');
+            return;
+          }
           const state = await loginUser(email, passcode);
           if (state) {
             saveActiveSession(email);
@@ -90,6 +95,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthenticated }) => {
             setError('Recovery failed. Invalid credentials.');
           }
         } else {
+          // Passcode-only login
+          if (!passcode) {
+            setError('Please enter your passcode.');
+            return;
+          }
           const state = await loginWithPasscodeOnly(passcode);
           if (state) {
             onAuthenticated(state);
@@ -104,11 +114,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthenticated }) => {
         }
         const success = await registerUser(email, passcode, name);
         if (success) {
-          const state = await loginUser(email, passcode);
-          if (state) {
-            saveActiveSession(email);
-            onAuthenticated(state);
-          }
+          // After successful registration, create initial state instead of trying to login immediately
+          // This avoids potential Firestore latency issues
+          const initialState = {
+            currentUser: { email, name, currency: 'USD', avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}` },
+            goals: [],
+            history: [],
+            hasSeenOnboarding: false,
+            customCategories: []
+          };
+          
+          saveActiveSession(email);
+          onAuthenticated(initialState);
         } else {
           setError('Email already exists in vault.');
         }

@@ -283,17 +283,31 @@ export const loginWithPasscodeOnly = async (passcode: string): Promise<AppState 
 
   // Check if this passcode belongs to the last active user
   if (lastEmail) {
-    const usersQuery = query(collection(firestore, 'users'), where('passcode', '==', passcode));
-    const usersSnapshot = await getDocs(usersQuery);
+    const userDocRef = getUserDocRef(lastEmail);
+    const userSnapshot = await getDoc(userDocRef);
     
-    if (!usersSnapshot.empty) {
-      const userDoc = usersSnapshot.docs[0];
-      saveActiveSession(userDoc.id);
-      const userData = userDoc.data();
-      // Save passcode locally for future automatic login
-      localStorage.setItem(`passcode_${userDoc.id}`, passcode);
-      return userData.state as AppState;
+    if (userSnapshot.exists()) {
+      const userData = userSnapshot.data();
+      if (userData?.passcode === passcode) {
+        saveActiveSession(lastEmail);
+        // Save passcode locally for future automatic login
+        localStorage.setItem(`passcode_${lastEmail}`, passcode);
+        return userData.state as AppState;
+      }
     }
+  }
+  
+  // As a fallback, query all users with this passcode
+  const usersQuery = query(collection(firestore, 'users'), where('passcode', '==', passcode));
+  const usersSnapshot = await getDocs(usersQuery);
+  
+  if (!usersSnapshot.empty) {
+    const userDoc = usersSnapshot.docs[0];
+    saveActiveSession(userDoc.id);
+    const userData = userDoc.data();
+    // Save passcode locally for future automatic login
+    localStorage.setItem(`passcode_${userDoc.id}`, passcode);
+    return userData.state as AppState;
   }
 
   return null;
