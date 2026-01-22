@@ -37,6 +37,9 @@ jobs:
         rm -rf android || echo "No existing android directory to remove"
         npx cap add android
         npx cap sync
+        # Fix Java version compatibility issues
+        sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' android/app/capacitor.build.gradle
+        sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' android/capacitor-cordova-android-plugins/build.gradle
 
     - name: Build Android APK
       run: |
