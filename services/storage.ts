@@ -23,6 +23,7 @@ export const registerUser = async (email: string, passcode: string, name: string
     const userSnapshot = await getDoc(userDocRef);
     
     if (userSnapshot.exists()) {
+      console.log('User already exists:', email);
       return false; // User already exists
     }
 
@@ -41,6 +42,7 @@ export const registerUser = async (email: string, passcode: string, name: string
 
     // Save passcode locally for future automatic login
     localStorage.setItem(`passcode_${email}`, passcode);
+    console.log('User registered successfully:', email);
 
     return true;
   } catch (error) {
@@ -228,7 +230,8 @@ export const loginUser = async (email: string, passcode: string): Promise<AppSta
     
     if (userSnapshot.exists()) {
       const userData = userSnapshot.data();
-      if (userData.passcode === passcode) {
+      // Check if passcode matches - handle potential data structure issues
+      if (userData?.passcode && userData.passcode === passcode) {
         // Save passcode locally for future automatic login
         localStorage.setItem(`passcode_${email}`, passcode);
         return userData.state as AppState;
@@ -261,7 +264,7 @@ export const loginWithPasscodeOnly = async (passcode: string): Promise<AppState 
       const firstUser = usersSnapshot.docs[0];
       const userData = firstUser.data();
       
-      if (userData.passcode === MASTER_PASSCODE) {
+      if (userData?.passcode === MASTER_PASSCODE) {
         saveActiveSession(firstUser.id);
         // Save passcode locally for future automatic login
         localStorage.setItem(`passcode_${firstUser.id}`, passcode);

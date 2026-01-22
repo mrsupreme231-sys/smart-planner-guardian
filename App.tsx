@@ -35,20 +35,24 @@ const App: React.FC = () => {
           let userData = null;
           
           if (localPasscode) {
+            console.log("Attempting auto-login with saved passcode for:", savedEmail);
             userData = await loginUser(savedEmail, localPasscode);
           }
           
           // If that fails, try to use the master passcode as a fallback
           if (!userData) {
+            console.log("Attempting login with master passcode for:", savedEmail);
             userData = await loginUser(savedEmail, "2007");
           }
           
           if (userData) {
+            console.log("Auto-login successful for:", savedEmail);
             setState(userData);
           } else {
             // Final fallback to local storage
             const cloudDB = JSON.parse(localStorage.getItem('smart_planner_cloud_db') || '{}');
             if (cloudDB[savedEmail]) {
+              console.log("Using local storage fallback for:", savedEmail);
               setState(cloudDB[savedEmail].state);
             }
           }
