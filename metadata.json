@@ -1,0 +1,7 @@
+{
+  "name": "Smart Planner & Financial Guardian",
+  "description": "A high-performance financial management application featuring smart installment planning, a 5% safety buffer engine, and a dedicated 'Financial Guardian' assistant.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
