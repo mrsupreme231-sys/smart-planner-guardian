@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { Bot, Send, User, WifiOff, Sparkles, Volume2, Play } from 'lucide-react';
 import { AppState } from '../types';
 import { speakText, stopSpeech } from '../services/tts';
@@ -89,41 +88,36 @@ const GuardianAI: React.FC<GuardianAIProps> = ({ appState }) => {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+      // Mock AI response instead of using Google GenAI
       const activeGoalsCount = appState.goals.length;
       const historyCount = appState.history.length;
       
       // Calculate missed payments for context
       const totalMissed = appState.goals.reduce((acc, g) => acc + g.installmentLogs.filter(l => l.status === 'failed').length, 0);
-
-      const systemInstruction = `
-        You are the 'Financial Guardian AI' for the Smart Planner & Financial Guardian app.
-        Current Context:
-        - User Name: ${appState.currentUser?.name}
-        - Active Goals: ${activeGoalsCount}
-        - Total Missed Installments: ${totalMissed}
-        
-        Behavior Guidelines:
-        1. If totalMissed > 0, provide specific encouragement to help the user get back on track.
-        2. Explain the "Wait" feature which adds 2 hours to a due payment.
-        3. Remind them about the "5% Buffer" as a safety net.
-        4. Mention Developer Info if asked: Cell +231 772014558/778613786, Email: adavidlsirleaf2005@gmail.com.
-        
-        Tone: Encouraging, non-judgmental, guardian-like, and financial-wise.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: messages.concat(userMessage).map(m => ({
-          role: m.role,
-          parts: [{ text: m.text }]
-        })),
-        config: { systemInstruction, temperature: 0.7 }
-      });
+      
+      // Generate a contextual response based on the input and app state
+      let responseText = "";
+      
+      if (input.toLowerCase().includes('help') || input.toLowerCase().includes('support')) {
+        responseText = "I'm here to help you stay on track with your financial goals! I can remind you about upcoming payments and help you manage your installments.";
+      } else if (input.toLowerCase().includes('missed') || input.toLowerCase().includes('failed')) {
+        if (totalMissed > 0) {
+          responseText = `I see you've missed ${totalMissed} payment(s). Don't be discouraged! You can use the 'Wait' feature to get a 2-hour extension, or consider adjusting your plan to make it more manageable.`;
+        } else {
+          responseText = "Great job! You haven't missed any payments recently. Keep up the good work!";
+        }
+      } else if (input.toLowerCase().includes('goal') || input.toLowerCase().includes('progress')) {
+        responseText = `You currently have ${activeGoalsCount} active goal(s). Your dedication to staying on track is commendable!`;
+      } else if (input.toLowerCase().includes('developer') || input.toLowerCase().includes('contact')) {
+        responseText = "This application was developed by D & M Smart Services. You can contact the developer at +231 772014558 or +231 778613786. Email: adavidlsirleaf2005@gmail.com";
+      } else {
+        // Default response
+        responseText = "Thank you for sharing. Remember, consistency is key to achieving your financial goals. If you're struggling with payments, consider using the 5% buffer to stay ahead of schedule.";
+      }
 
       const modelReply: Message = {
         role: 'model',
-        text: response.text || "I'm having trouble thinking. Try again?",
+        text: responseText,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, modelReply]);
