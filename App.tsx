@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppState, Goal, UserProfile, Category, InstallmentLog, InstallmentStatus } from './types';
-import { syncUserData, clearLocalSession, getActiveSessionEmail, loginUser } from './services/storage';
+import { syncUserData } from './services/storage';
 import Watermark from './components/Watermark';
 import Navigation from './components/Navigation';
 import Onboarding from './views/Onboarding';
@@ -9,67 +8,29 @@ import Dashboard from './views/Dashboard';
 import Activities from './views/Activities';
 import History from './views/History';
 import Settings from './views/Settings';
-import Auth from './views/Auth';
 import GuardianAI from './views/GuardianAI';
 import AlertDrawer from './components/AlertDrawer';
 import { checkInstallmentStatus, GuardianAlert, handleMissedPayments } from './services/notificationManager';
 import { speakText } from './services/tts';
 
 const App: React.FC = () => {
-  const [state, setState] = useState<AppState | null>(null);
+  // Create a default user state to bypass authentication
+  const [state, setState] = useState<AppState>({
+    currentUser: { 
+      email: 'demo@smartplanner.com', 
+      name: 'Demo User', 
+      currency: 'USD', 
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo' 
+    },
+    goals: [],
+    history: [],
+    hasSeenOnboarding: false, // Set to false to show onboarding
+    customCategories: []
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [activeAlerts, setActiveAlerts] = useState<GuardianAlert[]>([]);
   const lastCheckedMinute = useRef<number>(-1);
-
-  // Initialize Auth
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const savedEmail = getActiveSessionEmail();
-      if (savedEmail) {
-        try {
-          // Try to get user data from Firebase using a fallback approach
-          // First, try with a locally stored passcode if available
-          const localPasscode = localStorage.getItem(`passcode_${savedEmail}`);
-          let userData = null;
-          
-          if (localPasscode) {
-            console.log("Attempting auto-login with saved passcode for:", savedEmail);
-            userData = await loginUser(savedEmail, localPasscode);
-          }
-          
-          // If that fails, try to use the master passcode as a fallback
-          if (!userData) {
-            console.log("Attempting login with master passcode for:", savedEmail);
-            userData = await loginUser(savedEmail, "2007");
-          }
-          
-          if (userData) {
-            console.log("Auto-login successful for:", savedEmail);
-            setState(userData);
-          } else {
-            // Final fallback to local storage
-            const cloudDB = JSON.parse(localStorage.getItem('smart_planner_cloud_db') || '{}');
-            if (cloudDB[savedEmail]) {
-              console.log("Using local storage fallback for:", savedEmail);
-              setState(cloudDB[savedEmail].state);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user data from Firebase:", error);
-          // Fallback to local storage if Firebase fails
-          const cloudDB = JSON.parse(localStorage.getItem('smart_planner_cloud_db') || '{}');
-          if (cloudDB[savedEmail]) {
-            setState(cloudDB[savedEmail].state);
-          }
-        }
-      }
-      setIsAuthChecking(false);
-    };
-
-    initializeAuth();
-  }, []);
 
   // Sync effect
   useEffect(() => {
@@ -188,28 +149,46 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAuthenticated = (initialState: AppState) => { setState(initialState); };
-  const handleOnboardingComplete = () => { if (state) setState(prev => prev ? ({ ...prev, hasSeenOnboarding: true }) : null); };
-  const addGoal = (goal: Goal) => { if (state) setState(prev => prev ? ({ ...prev, goals: [goal, ...prev.goals] }) : null); };
-  const addCategory = (cat: Category) => { if (state) setState(prev => prev ? ({ ...prev, customCategories: [...prev.customCategories, cat] }) : null); };
-
-  const updateGoal = (updated: Goal, isFinished: boolean = false) => {
-    if (state) {
-      setState(prev => {
-        if (!prev) return null;
-        const newGoals = prev.goals.map(g => g.id === updated.id ? updated : g);
-        const newHistory = isFinished ? [updated, ...prev.history] : prev.history;
-        const finalGoals = isFinished ? newGoals.filter(g => g.id !== updated.id) : newGoals;
-        return { ...prev, goals: finalGoals, history: newHistory };
-      });
-    }
+  const handleOnboardingComplete = () => { 
+    setState(prev => prev ? ({ ...prev, hasSeenOnboarding: true }) : null); 
+  };
+  const addGoal = (goal: Goal) => { 
+    setState(prev => prev ? ({ ...prev, goals: [goal, ...prev.goals] }) : null); 
+  };
+  const addCategory = (cat: Category) => { 
+    setState(prev => prev ? ({ ...prev, customCategories: [...prev.customCategories, cat] }) : null); 
   };
 
-  const updateProfile = (profile: UserProfile) => { if (state) setState(prev => prev ? ({ ...prev, currentUser: profile }) : null); };
-  const handleLogout = () => { clearLocalSession(); setState(null); };
+  const updateGoal = (updated: Goal, isFinished: boolean = false) => {
+    setState(prev => {
+      if (!prev) return null;
+      const newGoals = prev.goals.map(g => g.id === updated.id ? updated : g);
+      const newHistory = isFinished ? [updated, ...prev.history] : prev.history;
+      const finalGoals = isFinished ? newGoals.filter(g => g.id !== updated.id) : newGoals;
+      return { ...prev, goals: finalGoals, history: newHistory };
+    });
+  };
 
-  if (isAuthChecking) return <div className="min-h-screen bg-indigo-600 flex items-center justify-center text-white font-black uppercase tracking-widest">Guardian Init...</div>;
-  if (!state) return <Auth onAuthenticated={handleAuthenticated} />;
+  const updateProfile = (profile: UserProfile) => { 
+    setState(prev => prev ? ({ ...prev, currentUser: profile }) : null); 
+  };
+  const handleLogout = () => { 
+    // Reset to demo state
+    setState({
+      currentUser: { 
+        email: 'demo@smartplanner.com', 
+        name: 'Demo User', 
+        currency: 'USD', 
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo' 
+      },
+      goals: [],
+      history: [],
+      hasSeenOnboarding: false,
+      customCategories: []
+    });
+  };
+
+  // Skip authentication for direct access
   if (!state.hasSeenOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
 
   return (
